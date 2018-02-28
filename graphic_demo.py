@@ -138,8 +138,16 @@ class VectorSprite(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = oldcenter
         
-    def turnfaceright(self, seconds):
+    def turnface(self, seconds, clockwise = True, dest_angle = None):
         angle = self.faceing
+        if dest_angle is None:
+            if clockwise == True:
+                angle += self.turnspeed * seconds
+                self.faceing += self.turnspeed * seconds
+            else:
+                angle -= self.turnspeed * seconds
+                self.faceing -= self.turnspeed * seconds
+            
         angle += self.turnspeed * seconds 
         self.faceing += self.turnspeed * seconds
         oldcenter = self.rect.center
@@ -344,17 +352,8 @@ class PygView():
         PygView.pictures["frigatepic"] = pygame.image.load(os.path.join("data", "Frigate.png")).convert_alpha()
         PygView.pictures["mothershippic"] = pygame.image.load(os.path.join("data", "Mothership.png")).convert_alpha()
         PygView.pictures["dreadnaughtpic"] = pygame.image.load(os.path.join("data", "Dreadnaught.png")).convert_alpha()
-        for filename in ["0", "1","2", "3", "4", "5", "6", "7", "8", "9", "10",
-                         "11", "12", "13", "14", "15", "16", "17", "18", "19", 
-                         "20", "21", "22", "23", "24", "25", "26", "27", "28", 
-                         "29", "30", "31", "32", "33", "34", "35"]:
-            PygView.pictures["station"+filename+"pic"] = pygame.image.load(os.path.join("data", "Station"+filename+".png")).convert_alpha()
         
         PygView.pictures["torpedopic"] = pygame.image.load(os.path.join("data", "Torpedo.png")).convert_alpha()
-        
-        for filename in ["1a", "1aa", "1aaa", "1aaaa", "2a", "2aa", "2aaa", "2aaaa", "3a", "3aa", "3aaa", "3aaaa", "4a", "4aa", "4aaa", "4aaaa", 
-                         "1b", "1bb", "1bbb", "1bbbb", "2b", "2bb", "2bbb", "2bbbb", "3b", "3bb", "3bbb", "3bbbb", "4b", "4bb", "4bbb", "4bbbb", ]:
-            PygView.pictures["explosion_"+filename+"pic"] = pygame.image.load(os.path.join("data", "explosion_"+filename+".png")).convert_alpha()
         
         self.clock = pygame.time.Clock()
         self.fps = fps
