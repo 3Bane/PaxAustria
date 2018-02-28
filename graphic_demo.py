@@ -353,8 +353,6 @@ class PygView():
         PygView.pictures["mothershippic"] = pygame.image.load(os.path.join("data", "Mothership.png")).convert_alpha()
         PygView.pictures["dreadnaughtpic"] = pygame.image.load(os.path.join("data", "Dreadnaught.png")).convert_alpha()
         
-        PygView.pictures["torpedopic"] = pygame.image.load(os.path.join("data", "Torpedo.png")).convert_alpha()
-        
         self.clock = pygame.time.Clock()
         self.fps = fps
         self.playtime = 0.0
