@@ -55,6 +55,8 @@ class VectorSprite(pygame.sprite.Sprite):
         self.distance_traveled = 0 # in pixel
         if "drift" not in kwargs:
             self.drift = True
+        if "faceing" not in kwargs:
+            self.faceing = 0
         if "friction" not in kwargs:
             self.friction = None
         if "hitpoints" not in kwargs:
@@ -85,11 +87,11 @@ class VectorSprite(pygame.sprite.Sprite):
         if "height" not in kwargs:
             self.height = self.radius * 2
         if "speed" not in kwargs:
-            self.speed = 5
+            self.speed = 2
         if "sticky_with_boss" not in kwargs:
             self.sticky_with_boss = False
         if "turnspeed" not in kwargs:
-            self.turnspeed = None
+            self.turnspeed = 5
         if "width" not in kwargs:
             self.width = self.radius * 2
         # ---
@@ -132,52 +134,13 @@ class VectorSprite(pygame.sprite.Sprite):
     def set_angle(self, degree):
         """rotates a sprite and changes it's angle to degree"""
         self.angle = degree
+        self.faceing = degree
         oldcenter = self.rect.center
         self.image = pygame.transform.rotate(self.image0, self.angle)
         self.image.convert_alpha()
         self.rect = self.image.get_rect()
         self.rect.center = oldcenter
         
-    def turnface(self, seconds, clockwise = True, dest_angle = None):
-        angle = self.faceing
-        if dest_angle is None:
-            if clockwise == True:
-                angle += self.turnspeed * seconds
-                self.faceing += self.turnspeed * seconds
-            else:
-                angle -= self.turnspeed * seconds
-                self.faceing -= self.turnspeed * seconds
-            
-        angle += self.turnspeed * seconds 
-        self.faceing += self.turnspeed * seconds
-        oldcenter = self.rect.center
-        self.image = pygame.transform.rotozoom(self.image0, angle, 1)
-        self.rect = self.image.get_rect() 
-        self.rect.center = oldcenter
-    
-    def turnfaceleft(self, seconds):
-        angle = self.faceing
-        angle -= self.turnspeed * seconds 
-        self.faceing -= self.turnspeed * seconds
-        oldcenter = self.rect.center
-        self.image = pygame.transform.rotozoom(self.image0, angle, 1)
-        self.rect = self.image.get_rect() 
-        self.rect.center = oldcenter
-        
-    def faceto(self, angle):
-        oldcenter = self.rect.center
-        self.image = pygame.transform.rotozoom(self.image0, angle, 1)
-        self.rect = self.image.get_rect() 
-        self.rect.center = oldcenter
-        
-    def turnleft(self, seconds):
-        self.movement.rotate(-self.turnspeed * seconds)
-        self.rotate(self.turnspeed * seconds)
-        
-    def turnright(self, seconds):
-        self.movement.rotate(self.turnspeed * seconds)
-        self.rotate(self.turnspeed * seconds)
-    
     def checkNextNavPoint(self):
         distance = self.nextNav - self.position
         if distance.length < 10:
@@ -188,9 +151,25 @@ class VectorSprite(pygame.sprite.Sprite):
         i2 = (self.navI +1) % len(self.path)
         self.nextNav = self.path[i2]
         self.movement = self.nextNav - self.position
-        self.set_angle(-self.movement.get_angle())
+        self.angle = self.movement.get_angle()
+        #self.set_angle(-self.movement.get_angle())
         self.movement = self.movement.normalized() * self.speed
         self.checkNextNavPoint()
+    
+    def turn_to_angle(self, seconds):
+        delta = (self.angle - self.faceing) % 360
+        if round(delta, 0) == 0:
+            return
+        if delta < 0:
+            newfaceing = self.turnspeed * seconds
+        elif delta > 0:
+            newfaceing = -self.turnspeed * seconds
+        self.faceing += newfaceing
+        oldcenter = self.rect.center
+        self.image = pygame.transform.rotate(self.image0, -self.faceing)
+        self.image.convert_alpha()
+        self.rect = self.image.get_rect()
+        self.rect.center = oldcenter
         
     def update(self, seconds):
         """calculate movement, position and bouncing on edge"""
@@ -201,19 +180,9 @@ class VectorSprite(pygame.sprite.Sprite):
             self.kill()
         if self.max_distance is not None and self.distance > self.max_distance:
             self.kill()
-        # ---- movement with/without boss ----
-        #if self.bossnumber is not None:
-        #    if self.kill_with_boss:
-        #        if self.bossnumber not in VectorSprite.numbers:
-        #            self.kill()
-        #        #print(self.bossnumber)
-        #    if self.sticky_with_boss:
-        #        boss = VectorSprite.numbers[self.bossnumber]
-        #        self.position = v.Vec2d(boss.position.x, boss.position.y)
             
         self.position += self.movement * seconds
-        #if self.friction is not None:
-        #    self.movement *= self.friction # friction between 1.0 and 0.1
+        self.turn_to_angle(seconds)
         self.distance_traveled += self.movement.length * seconds
         self.age += seconds
         
@@ -226,10 +195,6 @@ class Cannon(VectorSprite):
     def __init__(self, layer=4, **kwargs):
         VectorSprite.__init__(self, layer, **kwargs)
         self.mass = 0
-        #if "bossnumber" not in kwargs:
-            #print("error! cannon without boss number")
-        #checked = False
-        #Hitpointbar(self.number)
         self.kill_with_boss = True
         self.sticky_with_boss = True
     
@@ -242,28 +207,6 @@ class Cannon(VectorSprite):
         self.rect = self.image.get_rect()
         self.image0 = self.image.copy()
 
-
-class Fragment(VectorSprite):
-    pass
-    #def init2(self, layer=4, **kwargs):
-    #    self.position = position
-    #    if mov is None:
-    #        self.movement = v.Vec2d(random.randint(-50,50), 
-    #                              random.randint(-50,50))
-    #    else:
-    #        self.movement = mov
-    #    self.maxage = random.randint(1,3) # in seconds
-    #    
-    #    
-    #def create_image(self):
-    #    self.color = (random.randint(50, 150), random.randint(50, 150), random.randint(50, 150))
-    #    self.image = pygame.Surface((10, 10))
-    #    pygame.draw.circle(self.image, self.color, (5,5), 3)
-    #    self.image.set_colorkey((0,0,0))
-    #    self.image.convert_alpha()  
-    #    self.image0 = self.image.copy()
-        
-        
 
 class Ship(VectorSprite):
     
@@ -373,14 +316,10 @@ class PygView():
         
         VectorSprite.groups = self.allgroup, self.vectorspritegroup
         
-        #self.station1 = v.Vec2d(325, 250)
-        #self.station2 = v.Vec2d(650, 450)
-        #self.station3 = v.Vec2d(975, 250)
         
         
         #-----------mothership0----------
         self.mothership0 = Ship(picture = PygView.pictures["mothershippic"])
-        #self.mothership0 = VectorSprite(image = PygView.pictures["mothershippic"])
         w = PygView.width
         h = PygView.height
         self.mothership0.path = [v.Vec2d(round(w*0.750,0), round(h*0.50,0)),
@@ -430,14 +369,11 @@ class PygView():
                                   v.Vec2d(round(w*0.750,0), round(h*0.55,0))
                                  ]
         self.mothership0.position = self.mothership0.path[0]
-        self.mothership0.flyToNextNavPoint() 
-        #points = [(p.x, p.y) for p in self.mothership0.path]
-        #pygame.draw.polygon(self.background, (200,0,50), points, 1)
+        #self.mothership0.flyToNextNavPoint() 
                                  
         
         #-----------drednaught0----------
         self.dreadnaught0 = Ship(picture = PygView.pictures["dreadnaughtpic"])
-        #self.dreadnaught0 = VectorSprite(image = PygView.pictures["dreadnaughtpic"])
         w = PygView.width
         h = PygView.height
         self.dreadnaught0.path = [v.Vec2d(round(w*0.250,0), round(h*0.50,0)),
@@ -489,23 +425,8 @@ class PygView():
                                   v.Vec2d(round(w*0.250,0), round(h*0.45,0))
                                  ]
         self.dreadnaught0.position = self.dreadnaught0.path[0]
-        self.dreadnaught0.flyToNextNavPoint() 
-        #points = [(p.x, p.y) for p in self.dreadnaught0.path]
-        #pygame.draw.polygon(self.background, (100,200,100), points, 1)
-        
-        
-        
-        #self.horst = Ship(picture = PygView.pictures["frigatepic"])
-        #self.horst.path = [ v.Vec2d(550,200),
-        #                    v.Vec2d(550,500),
-        #                    v.Vec2d(650,400),
-        #                    v.Vec2d(750,500),
-        #                    v.Vec2d(750,200),
-        #                    v.Vec2d(650,300),]
-        #self.horst.position = self.horst.path[0]
-        #self.horst.flyToNextNavPoint() 
-        #points = [(p.x, p.y) for p in self.horst.path]
-        #pygame.draw.polygon(self.background, (100,0,100), points, 1)
+        self.dreadnaught0.set_angle(180)
+        #self.dreadnaught0.flyToNextNavPoint() 
         
         
         
