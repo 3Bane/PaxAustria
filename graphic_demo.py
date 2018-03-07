@@ -72,6 +72,8 @@ class VectorSprite(pygame.sprite.Sprite):
             self.max_age = None
         if "max_distance" not in kwargs:
             self.max_distance = None
+        if "max_range" not in kwargs:
+            self.max_range = 400
         if "movement" not in kwargs:
             self.movement = v.Vec2d(0,0)
         self.navI = 0
@@ -189,24 +191,31 @@ class VectorSprite(pygame.sprite.Sprite):
         self.rect.center = ( round(self.position.x, 0), 
                              round(self.position.y, 0) )
 
-class Cannon(VectorSprite):
-    """it's a line, acting as a cannon. with a Ball as boss"""
-    
-    def __init__(self, layer=4, **kwargs):
-        VectorSprite.__init__(self, layer, **kwargs)
-        self.mass = 0
-        self.kill_with_boss = True
-        self.sticky_with_boss = True
+
+class Balloon(VectorSprite):
     
     def create_image(self):
-        self.image = pygame.Surface((120, 20))
-        #self.image.fill((50, 200, 100))
-        pygame.draw.rect(self.image, (50,90,200), (50, 0, 70, 20))
-        self.image.set_colorkey((0,0,0))
-        self.image.convert_alpha()
-        self.rect = self.image.get_rect()
+        if self.picture is not None:
+            self.image = self.picture.copy()
+        else:            
+            self.image = pygame.Surface((self.width,self.height))    
+            pygame.draw.circle(self.image, (random.randint(0,255),random.randint(0,255),random.randint(0,255)),
+                               (self.width//2, self.height//2), self.width)
+            #self.image.fill((self.color))
+        self.image = self.image.convert_alpha()
         self.image0 = self.image.copy()
+        self.rect = self.image.get_rect()
+        self.width = self.rect.width
+        self.height = self.rect.height
 
+
+class Turret(VectorSprite):
+    
+    def update(self, seconds):
+        VectorSprite.update(self, seconds)
+        vec = self.startVec.rotated(self.carrier.faceing)
+        self.position = self.carrier.position + vec
+        
 
 class Ship(VectorSprite):
     
@@ -295,6 +304,7 @@ class PygView():
         PygView.pictures["frigatepic"] = pygame.image.load(os.path.join("data", "Frigate.png")).convert_alpha()
         PygView.pictures["mothershippic"] = pygame.image.load(os.path.join("data", "Mothership.png")).convert_alpha()
         PygView.pictures["dreadnaughtpic"] = pygame.image.load(os.path.join("data", "Dreadnaught.png")).convert_alpha()
+        PygView.pictures["turretpic"] = pygame.image.load(os.path.join("data", "Turret.png")).convert_alpha()
         
         self.clock = pygame.time.Clock()
         self.fps = fps
@@ -313,13 +323,16 @@ class PygView():
         #groups
         self.allgroup =  pygame.sprite.LayeredUpdates()
         self.vectorspritegroup = pygame.sprite.Group()
+        self.turretgroup = pygame.sprite.Group()
+        self.balloongroup = pygame.sprite.Group()
         
         VectorSprite.groups = self.allgroup, self.vectorspritegroup
-        
+        Turret.groups = self.allgroup, self.turretgroup
+        Balloon.groups = self.allgroup, self.balloongroup
         
         
         #-----------mothership0----------
-        self.mothership0 = Ship(picture = PygView.pictures["mothershippic"])
+        self.mothership0 = Ship(picture = PygView.pictures["mothershippic"], color = (164, 164, 64))
         w = PygView.width
         h = PygView.height
         self.mothership0.path = [v.Vec2d(round(w*0.750,0), round(h*0.50,0)),
@@ -373,7 +386,7 @@ class PygView():
                                  
         
         #-----------drednaught0----------
-        self.dreadnaught0 = Ship(picture = PygView.pictures["dreadnaughtpic"])
+        self.dreadnaught0 = Ship(picture = PygView.pictures["dreadnaughtpic"], color = (64, 164, 164))
         w = PygView.width
         h = PygView.height
         self.dreadnaught0.path = [v.Vec2d(round(w*0.250,0), round(h*0.50,0)),
@@ -426,8 +439,30 @@ class PygView():
                                  ]
         self.dreadnaught0.position = self.dreadnaught0.path[0]
         self.dreadnaught0.set_angle(180)
-        #self.dreadnaught0.flyToNextNavPoint() 
         
+        
+        #-----------turretD1-------------
+        self.turretD1 = Turret(picture = PygView.pictures["turretpic"],position = self.dreadnaught0.position,
+                              carrier = self.dreadnaught0, startVec = v.Vec2d(100, 0), max_range = 500)
+        
+        
+        #-----------turretD2-------------
+        self.turretD2 = Turret(picture = PygView.pictures["turretpic"],position = self.dreadnaught0.position,
+                              carrier = self.dreadnaught0, startVec = v.Vec2d(75, -30), max_range = 500)
+                              
+        
+        #-----------turretD3-------------
+        self.turretD3 = Turret(picture = PygView.pictures["turretpic"],position = self.dreadnaught0.position,
+                              carrier = self.dreadnaught0, startVec = v.Vec2d(75, 30), max_range = 500)
+                              
+        
+        #-----------turretM1-------------
+        self.turretM1 = Turret(picture = PygView.pictures["turretpic"],position = self.mothership0.position,
+                              carrier = self.mothership0, startVec = v.Vec2d(85, 0), max_range = 400)
+        
+        for b in range(100):
+            Balloon(position = v.Vec2d(random.randint(278, 1000), 
+                               random.randint(20, 680)), width=8, height=8)
         
         
     def run(self):
@@ -450,30 +485,22 @@ class PygView():
                     if event.key == pygame.K_ESCAPE:
                         running = False
                     
-                    
+            # ---------- update screen ----------- 
+            self.screen.blit(self.background, (0, 0))
+                  
                         
             # --------- pressed key handler --------------  
             pressedkeys = pygame.key.get_pressed() 
             
-            
-            # ---------- update screen ----------- 
-            self.screen.blit(self.background, (0, 0))
-            
-            #---dreadnaught0---
-            if pressedkeys[pygame.K_y]:
-                pygame.draw.circle(self.screen, (64,64,64), self.mothership0.rect.center, 350, 2)
-            #if pressedkeys[pygame.K_y]:
-                pygame.draw.circle(self.screen, (64,64,64), self.mothership0.rect.center, 250, 2)
-            #if pressedkeys[pygame.K_y]:
-                pygame.draw.circle(self.screen, (64,64,64), self.mothership0.rect.center, 200, 2)
-            
-            #---mothership0---
             if pressedkeys[pygame.K_x]:
-                pygame.draw.circle(self.screen, (64,64,64), self.dreadnaught0.rect.center, 500, 2)
-            #if pressedkeys[pygame.K_x]:
-                pygame.draw.circle(self.screen, (64,64,64), self.dreadnaught0.rect.center, 400, 2)
-            #if pressedkeys[pygame.K_x]:
-                pygame.draw.circle(self.screen, (64,64,64), self.dreadnaught0.rect.center, 375, 2)
+                for t in self.turretgroup:
+                    pygame.draw.circle(self.screen, t.carrier.color, t.rect.center, t.max_range, 2)
+            
+            if pressedkeys[pygame.K_y]:
+                pygame.draw.circle(self.screen, (64, 64, 64), self.mothership0.rect.center, 350, 2)
+                print("hi", self.mothership0.rect.center)
+            
+          
             
             self.allgroup.update(seconds) 
             self.allgroup.draw(self.screen)  
