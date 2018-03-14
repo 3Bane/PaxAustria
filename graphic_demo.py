@@ -78,6 +78,8 @@ class VectorSprite(pygame.sprite.Sprite):
             self.movement = v.Vec2d(0,0)
         self.navI = 0
         self.path = []
+        if "party" not in kwargs:
+            self.party = 0
         if "picture" not in kwargs:
             self.picture = None
         if "pointlist" not in kwargs:
@@ -92,6 +94,8 @@ class VectorSprite(pygame.sprite.Sprite):
             self.speed = 2
         if "sticky_with_boss" not in kwargs:
             self.sticky_with_boss = False
+        if "threat_lvl" not in kwargs:
+            self.threat_lvl = random.randint(0, 5)
         if "turnspeed" not in kwargs:
             self.turnspeed = 5
         if "width" not in kwargs:
@@ -199,7 +203,7 @@ class Balloon(VectorSprite):
             self.image = self.picture.copy()
         else:            
             self.image = pygame.Surface((self.width,self.height))    
-            pygame.draw.circle(self.image, (random.randint(0,255),random.randint(0,255),random.randint(0,255)),
+            pygame.draw.circle(self.image, (50*self.threat_lvl, 10*self.threat_lvl , 50),
                                (self.width//2, self.height//2), self.width)
             #self.image.fill((self.color))
         self.image = self.image.convert_alpha()
@@ -322,20 +326,25 @@ class PygView():
         """painting ships on the surface"""
         #groups
         self.allgroup =  pygame.sprite.LayeredUpdates()
+        self.targetgroup = pygame.sprite.Group()
+        self.shipgroup = pygame.sprite.Group()
         self.vectorspritegroup = pygame.sprite.Group()
         self.turretgroup = pygame.sprite.Group()
         self.balloongroup = pygame.sprite.Group()
         
         VectorSprite.groups = self.allgroup, self.vectorspritegroup
-        Turret.groups = self.allgroup, self.turretgroup
-        Balloon.groups = self.allgroup, self.balloongroup
+        Ship.groups = self.allgroup, self.shipgroup, self.targetgroup
+        Turret.groups = self.allgroup, self.turretgroup, self.targetgroup
+        Balloon.groups = self.allgroup, self.balloongroup, self.targetgroup
         
         
-        #-----------mothership0----------
-        self.mothership0 = Ship(picture = PygView.pictures["mothershippic"], color = (164, 164, 64))
+        #-----------mothership1----------
+        self.mothership1 = Ship(picture = PygView.pictures["mothershippic"],
+                                color = (164, 164, 64),
+                                party=1, hitpoints = 7500, threat_lvl = 20)
         w = PygView.width
         h = PygView.height
-        self.mothership0.path = [v.Vec2d(round(w*0.750,0), round(h*0.50,0)),
+        self.mothership1.path = [v.Vec2d(round(w*0.750,0), round(h*0.50,0)),
         
                                   v.Vec2d(round(w*0.725,0), round(h*0.35,0)),
                                   v.Vec2d(round(w*0.690,0), round(h*0.27,0)),
@@ -381,15 +390,17 @@ class PygView():
                                   v.Vec2d(round(w*0.745,0), round(h*0.60,0)),
                                   v.Vec2d(round(w*0.750,0), round(h*0.55,0))
                                  ]
-        self.mothership0.position = self.mothership0.path[0]
+        self.mothership1.position = self.mothership1.path[0]
         #self.mothership0.flyToNextNavPoint() 
                                  
         
-        #-----------drednaught0----------
-        self.dreadnaught0 = Ship(picture = PygView.pictures["dreadnaughtpic"], color = (64, 164, 164))
+        #-----------dreadnaught2----------
+        self.dreadnaught2 = Ship(picture = PygView.pictures["dreadnaughtpic"], 
+                                 color = (64, 164, 164),
+                                 party = 2, hitpoints = 8000, threat_lvl = 20)
         w = PygView.width
         h = PygView.height
-        self.dreadnaught0.path = [v.Vec2d(round(w*0.250,0), round(h*0.50,0)),
+        self.dreadnaught2.path = [v.Vec2d(round(w*0.250,0), round(h*0.50,0)),
         
                                   v.Vec2d(round(w*0.250,0), round(h*0.55,0)),
                                   v.Vec2d(round(w*0.255,0), round(h*0.60,0)),
@@ -437,32 +448,37 @@ class PygView():
                                   v.Vec2d(round(w*0.255,0), round(h*0.40,0)),
                                   v.Vec2d(round(w*0.250,0), round(h*0.45,0))
                                  ]
-        self.dreadnaught0.position = self.dreadnaught0.path[0]
-        self.dreadnaught0.set_angle(180)
+        self.dreadnaught2.position = self.dreadnaught2.path[0]
+        self.dreadnaught2.set_angle(180)
         
         
         #-----------turretD1-------------
-        self.turretD1 = Turret(picture = PygView.pictures["turretpic"],position = self.dreadnaught0.position,
-                              carrier = self.dreadnaught0, startVec = v.Vec2d(100, 0), max_range = 500)
+        self.turretD1 = Turret(picture = PygView.pictures["turretpic"],position = self.dreadnaught2.position,
+                              carrier = self.dreadnaught2, startVec = v.Vec2d(100, 0), max_range = 500,
+                              party = 2, hitpoints = 250, threat_lvl = 10)
         
         
         #-----------turretD2-------------
-        self.turretD2 = Turret(picture = PygView.pictures["turretpic"],position = self.dreadnaught0.position,
-                              carrier = self.dreadnaught0, startVec = v.Vec2d(75, -30), max_range = 500)
+        self.turretD2 = Turret(picture = PygView.pictures["turretpic"],position = self.dreadnaught2.position,
+                              carrier = self.dreadnaught2, startVec = v.Vec2d(75, -30), max_range = 500,
+                              party = 2, hitpoints = 250, threat_lvl = 10)
                               
         
         #-----------turretD3-------------
-        self.turretD3 = Turret(picture = PygView.pictures["turretpic"],position = self.dreadnaught0.position,
-                              carrier = self.dreadnaught0, startVec = v.Vec2d(75, 30), max_range = 500)
+        self.turretD3 = Turret(picture = PygView.pictures["turretpic"],position = self.dreadnaught2.position,
+                              carrier = self.dreadnaught2, startVec = v.Vec2d(75, 30), max_range = 500,
+                              party = 2, hitpoints = 250, threat_lvl = 10)
                               
         
         #-----------turretM1-------------
-        self.turretM1 = Turret(picture = PygView.pictures["turretpic"],position = self.mothership0.position,
-                              carrier = self.mothership0, startVec = v.Vec2d(85, 0), max_range = 400)
+        self.turretM1 = Turret(picture = PygView.pictures["turretpic"],position = self.mothership1.position,
+                              carrier = self.mothership1, startVec = v.Vec2d(85, 0), max_range = 400,
+                              party = 1, hitpoints = 250, threat_lvl = 10)
         
-        for b in range(100):
+        for b in range(50):
             Balloon(position = v.Vec2d(random.randint(278, 1000), 
-                               random.randint(20, 680)), width=8, height=8)
+                               random.randint(20, 680)), width=8, height=8, 
+                               hitpoints = random.randint(40,400))
         
         
     def run(self):
@@ -487,23 +503,47 @@ class PygView():
                     
             # ---------- update screen ----------- 
             self.screen.blit(self.background, (0, 0))
-                  
-                        
+            
             # --------- pressed key handler --------------  
             pressedkeys = pygame.key.get_pressed() 
+            
             
             if pressedkeys[pygame.K_x]:
                 for t in self.turretgroup:
                     pygame.draw.circle(self.screen, t.carrier.color, t.rect.center, t.max_range, 2)
             
-            if pressedkeys[pygame.K_y]:
-                pygame.draw.circle(self.screen, (64, 64, 64), self.mothership0.rect.center, 350, 2)
-                print("hi", self.mothership0.rect.center)
+            
             
           
             
             self.allgroup.update(seconds) 
             self.allgroup.draw(self.screen)  
+            
+            # draw line to enemy      
+            # ------ turret auto-aim------
+            for tr in self.turretgroup:
+                targets = []
+                for ta in self.targetgroup:
+                    if ta.party != tr.party:
+                        if ta.position.get_distance(tr.position) <= tr.max_range:
+                            targets.append(ta)
+                            
+                primaryTarget = None
+                for ta in targets:
+                    if primaryTarget is None:
+                        primaryTarget = ta
+                    elif ta.threat_lvl > primaryTarget.threat_lvl:
+                        primaryTarget = ta
+                if primaryTarget is not None:
+                    pygame.draw.line(self.screen, (64,64,64), 
+                                     (tr.position.x, tr.position.y), 
+                                     (primaryTarget.position.x, primaryTarget.position.y), 1
+                                    )
+            
+                vectordiff = self.turretD1.position - primaryTarget.position
+                tr.set_angle(-vectordiff.get_angle()-180)
+           
+            
             pygame.display.flip()
         pygame.quit()
     
