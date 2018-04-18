@@ -115,7 +115,11 @@ class VectorSprite(pygame.sprite.Sprite):
         
         
     def kill(self):
-        del VectorSprite.numbers[self.number] # remove Sprite from numbers dict
+        try:
+           del VectorSprite.numbers[self.number] # remove Sprite from numbers dict
+        except:
+            # key error?
+            print("problem: could not delete sprite number" + str(self.number))
         pygame.sprite.Sprite.kill(self)
         
     def animate(self):
@@ -266,6 +270,10 @@ class Turret(VectorSprite):
             self.kill()
         
 
+class PDturret(Turret):
+    pass
+    
+
 class Missile(VectorSprite):
     
     def create_image(self):
@@ -293,6 +301,11 @@ class Missile(VectorSprite):
         #    self.kill()
         #self.tr_distance_old = self.tr_distance
 
+class PDshot(Missile):
+    
+    def kill(self):
+        VectorSprite.kill(self)
+
 
 class Ship(VectorSprite):
     
@@ -300,7 +313,22 @@ class Ship(VectorSprite):
         self.flyToNextNavPoint()
         VectorSprite.update(self, seconds)
         
-        
+
+class AttackFighter(VectorSprite):
+    
+    def __init__(self, **kwargs):
+        VectorSprite.__init__(self, **kwargs)
+        if "TargetSprite" not in kwargs:
+            self.TargetSprite = None
+            
+    def update(self, seconds):
+        self.set_angle(-self.movement.get_angle())
+        #speedlimit
+        currentspeed = self.movement.get_length()
+        if currentspeed != self.speed:
+            self.movement = self.movement.normalized() * self.speed
+        VectorSprite.update(self, seconds)
+    
         
 ####
 
@@ -429,8 +457,14 @@ class PygView():
         PygView.pictures["hunterpic"] = pygame.image.load(os.path.join("data","Hunter.png")).convert_alpha()
         PygView.pictures["hunterpic"] = pygame.transform.scale(PygView.pictures["hunterpic"], (40, 40)).convert_alpha()
         
+        PygView.pictures["swarmhunterpic"] = pygame.image.load(os.path.join("data","Hunter.png")).convert_alpha()
+        PygView.pictures["swarmhunterpic"] = pygame.transform.scale(PygView.pictures["swarmhunterpic"], (20, 20)).convert_alpha()
+        
         PygView.pictures["bomberpic"] = pygame.image.load(os.path.join("data", "Bomber.png")).convert_alpha()
         PygView.pictures["bomberpic"] = pygame.transform.scale(PygView.pictures["bomberpic"], (40, 40)).convert_alpha()
+        
+        PygView.pictures["swarmbomberpic"] = pygame.image.load(os.path.join("data", "Bomber.png")).convert_alpha()
+        PygView.pictures["swarmbomberpic"] = pygame.transform.scale(PygView.pictures["swarmbomberpic"], (20, 20)).convert_alpha()
         
         PygView.pictures["paladinpic"] = pygame.image.load(os.path.join("data", "Paladin.png")).convert_alpha()
         PygView.pictures["paladinpic"] = pygame.transform.scale(PygView.pictures["paladinpic"], (70, 70)).convert_alpha()
@@ -444,11 +478,24 @@ class PygView():
         PygView.pictures["dreadnaughtpic"] = pygame.image.load(os.path.join("data", "Dreadnaught.png")).convert_alpha()
         PygView.pictures["dreadnaughtpic"] = pygame.transform.scale(PygView.pictures["dreadnaughtpic"], (250, 250)).convert_alpha()
         
-        PygView.pictures["turretpic"] = pygame.image.load(os.path.join("data", "Turret.png")).convert_alpha()
-        PygView.pictures["turretpic"] = pygame.transform.scale(PygView.pictures["turretpic"], (60, 60)).convert_alpha()
+        PygView.pictures["turret0pic"] = pygame.image.load(os.path.join("data", "Turret0.png")).convert_alpha()
+        PygView.pictures["turret0pic"] = pygame.transform.scale(PygView.pictures["turret0pic"], (60, 60)).convert_alpha()
         
-        PygView.pictures["missilepic"] = pygame.image.load(os.path.join("data", "Missile.png")).convert_alpha()
-        PygView.pictures["missilepic"] = pygame.transform.scale(PygView.pictures["missilepic"], (21, 21)).convert_alpha()
+        PygView.pictures["turret1pic"] = pygame.image.load(os.path.join("data", "Turret1.png")).convert_alpha()
+        PygView.pictures["turret1pic"] = pygame.transform.scale(PygView.pictures["turret1pic"], (60, 60)).convert_alpha()
+        
+        PygView.pictures["pdturretpic"] = pygame.image.load(os.path.join("data", "PDturret.png")).convert_alpha()
+        PygView.pictures["pdturretpic"] = pygame.transform.scale(PygView.pictures["pdturretpic"], (31, 31)).convert_alpha()
+        
+        PygView.pictures["missile0pic"] = pygame.image.load(os.path.join("data", "Missile0.png")).convert_alpha()
+        PygView.pictures["missile0pic"] = pygame.transform.scale(PygView.pictures["missile0pic"], (21, 21)).convert_alpha()
+        
+        PygView.pictures["missile1pic"] = pygame.image.load(os.path.join("data", "Missile1.png")).convert_alpha()
+        PygView.pictures["missile1pic"] = pygame.transform.scale(PygView.pictures["missile1pic"], (21, 21)).convert_alpha()
+        
+        PygView.pictures["pdshotpic"] = pygame.image.load(os.path.join("data", "PDshot.png")).convert_alpha()
+        PygView.pictures["pdshotpic"] = pygame.transform.scale(PygView.pictures["pdshotpic"], (13, 13)).convert_alpha()
+        
         
         for p in range(10):
             name = "exp" + str(p) + ".png"
@@ -472,28 +519,35 @@ class PygView():
         """painting ships on the surface"""
         #groups
         self.allgroup =  pygame.sprite.LayeredUpdates()
-        self.targetgroup = pygame.sprite.Group()
+        self.mtargetgroup = pygame.sprite.Group()
+        self.pdtargetgroup = pygame.sprite.Group()
         self.shipgroup = pygame.sprite.Group()
+        self.attackfightergroup = pygame.sprite.Group()
         self.vectorspritegroup = pygame.sprite.Group()
         self.turretgroup = pygame.sprite.Group()
+        self.pdturretgroup = pygame.sprite.Group()
         self.balloongroup = pygame.sprite.Group()
         self.flytextgroup = pygame.sprite.Group()
         self.missilegroup = pygame.sprite.Group()
+        self.pdshotgroup = pygame.sprite.Group()
         self.explosiongroup = pygame.sprite.Group()
         
         Flytext.groups = self.flytextgroup, self.allgroup
         VectorSprite.groups = self.allgroup, self.vectorspritegroup
-        Ship.groups = self.allgroup, self.shipgroup, self.targetgroup
-        Turret.groups = self.allgroup, self.turretgroup, self.targetgroup
-        Balloon.groups = self.allgroup, self.balloongroup, self.targetgroup
-        Missile.groups = self.allgroup, self.missilegroup, self.targetgroup
+        Ship.groups = self.allgroup, self.shipgroup, self.mtargetgroup
+        AttackFighter.groups = self.allgroup, self.shipgroup, self.attackfightergroup, self.pdtargetgroup
+        Turret.groups = self.allgroup, self.turretgroup, self.mtargetgroup
+        PDturret.groups = self.allgroup, self.pdturretgroup, self.mtargetgroup
+        Balloon.groups = self.allgroup, self.balloongroup, self.mtargetgroup
+        Missile.groups = self.allgroup, self.missilegroup, self.pdtargetgroup
+        PDshot.groups = self.allgroup, self.pdshotgroup
         Explosion.groups = self.allgroup, self.explosiongroup
         
         
         #-----------mothership1----------
         self.mothership1 = Ship(picture = PygView.pictures["mothershippic"],
                                 color = (164, 164, 64),
-                                party=1, threat_lvl = 20, hitpoints = 100000)
+                                party = 1, threat_lvl = 20, hitpoints = 100000)
         w = PygView.width
         h = PygView.height
         self.mothership1.path = [v.Vec2d(round(w*0.750,0), round(h*0.50,0)),
@@ -549,7 +603,7 @@ class PygView():
         #-----------dreadnaught2----------
         self.dreadnaught2 = Ship(picture = PygView.pictures["dreadnaughtpic"], 
                                  color = (64, 164, 164),
-                                 party = 2, threat_lvl = 20, hitpoints = 120000)
+                                 party = 0, threat_lvl = 20, hitpoints = 120000)
         w = PygView.width
         h = PygView.height
         self.dreadnaught2.path = [v.Vec2d(round(w*0.250,0), round(h*0.50,0)),
@@ -605,34 +659,104 @@ class PygView():
         
         
         #-----------turretD1-------------
-        self.turretD1 = Turret(picture = PygView.pictures["turretpic"], position = self.dreadnaught2.position,
+        self.turretD1 = Turret(picture = PygView.pictures["turret0pic"], position = self.dreadnaught2.position,
                               carrier = self.dreadnaught2, startVec = v.Vec2d(100, 0), max_range = 500,
-                              party = 2, threat_lvl = 10, hitpoints = 500)
+                              party = 0, threat_lvl = 7, hitpoints = 500)
         
         
         #-----------turretD2-------------
-        self.turretD2 = Turret(picture = PygView.pictures["turretpic"],position = self.dreadnaught2.position,
+        self.turretD2 = Turret(picture = PygView.pictures["turret0pic"],position = self.dreadnaught2.position,
                               carrier = self.dreadnaught2, startVec = v.Vec2d(75, -30), max_range = 500,
-                              party = 2, threat_lvl = 10, hitpoints = 500)
+                              party = 0, threat_lvl = 7, hitpoints = 500)
                               
         
         #-----------turretD3-------------
-        self.turretD3 = Turret(picture = PygView.pictures["turretpic"],position = self.dreadnaught2.position,
+        self.turretD3 = Turret(picture = PygView.pictures["turret0pic"],position = self.dreadnaught2.position,
                               carrier = self.dreadnaught2, startVec = v.Vec2d(75, 30), max_range = 500,
-                              party = 2, threat_lvl = 10, hitpoints = 500)
+                              party = 0, threat_lvl = 7, hitpoints = 500)
+                              
+                              
+        #-----------pdturretD1-----------    
+        self.pdturretD1 = PDturret(picture = PygView.pictures["pdturretpic"],position = self.dreadnaught2.position,
+                              carrier = self.dreadnaught2, startVec = v.Vec2d(50, -40), max_range = 200,
+                              party = 0, threat_lvl = 7, hitpoints = 300)
+                              
+                              
+        #-----------pdturretD2-----------    
+        self.pdturretD2 = PDturret(picture = PygView.pictures["pdturretpic"],position = self.dreadnaught2.position,
+                              carrier = self.dreadnaught2, startVec = v.Vec2d(-50, 0), max_range = 200,
+                              party = 0, threat_lvl = 7, hitpoints = 300)
+                              
+                              
+        #-----------pdturretD3-----------    
+        self.pdturretD3 = PDturret(picture = PygView.pictures["pdturretpic"],position = self.dreadnaught2.position,
+                              carrier = self.dreadnaught2, startVec = v.Vec2d(50, 40), max_range = 200,
+                              party = 0, threat_lvl = 7, hitpoints = 300)
+                              
+                              
+                              
+                              
+        #-----------turretM1-------------
+        self.turretM1 = Turret(picture = PygView.pictures["turret1pic"],position = self.mothership1.position,
+                              carrier = self.mothership1, startVec = v.Vec2d(85, 0), max_range = 700,
+                              party = 1, threat_lvl = 7, hitpoints = 500)
+
+
+        #-----------pdturretM1-----------    
+        self.pdturretM1 = PDturret(picture = PygView.pictures["pdturretpic"],position = self.mothership1.position,
+                              carrier = self.mothership1, startVec = v.Vec2d(-50, 0), max_range = 300,
+                              party = 1, threat_lvl = 7, hitpoints = 300)
+                              
+                              
+        #-----------pdturretM2-----------    
+        self.pdturretM2 = PDturret(picture = PygView.pictures["pdturretpic"],position = self.mothership1.position,
+                              carrier = self.mothership1, startVec = v.Vec2d(75, -30), max_range = 300,
+                              party = 1, threat_lvl = 7, hitpoints = 300)
+                              
+                              
+        #-----------pdturretM3-----------    
+        self.pdturretM3 = PDturret(picture = PygView.pictures["pdturretpic"],position = self.mothership1.position,
+                              carrier = self.mothership1, startVec = v.Vec2d(75, 30), max_range = 300,
+                              party = 1, threat_lvl = 7, hitpoints = 300)
                               
         
-        #-----------turretM1-------------
-        self.turretM1 = Turret(picture = PygView.pictures["turretpic"],position = self.mothership1.position,
-                              carrier = self.mothership1, startVec = v.Vec2d(85, 0), max_range = 400,
-                              party = 1, threat_lvl = 10, hitpoints = 500)
+        
+        #_____________attackFighterD1___________
+        self.attackFighterD1 = AttackFighter(picture = PygView.pictures["swarmhunterpic"],
+                                             position = v.Vec2d(620,300), movement = v.Vec2d(2000, -500), 
+                                             party = 0, hitpoints = 60, speed = 500)
+        
+        
+        #_____________attackFighterD2___________
+        self.attackFighterD2 = AttackFighter(picture = PygView.pictures["swarmhunterpic"],
+                                             position = v.Vec2d(640,320), movement = v.Vec2d(2000, -500), 
+                                             party = 0, hitpoints = 60, speed = 500)
+        
+        
+        #_____________attackFighterD3___________
+        self.attackFighterD3 = AttackFighter(picture = PygView.pictures["swarmhunterpic"],
+                                             position = v.Vec2d(660,340), movement = v.Vec2d(2000, -500), 
+                                             party = 0, hitpoints = 60, speed = 500)
+        
+        
+        #_____________attackFighterD4___________
+        self.attackFighterD4 = AttackFighter(picture = PygView.pictures["swarmhunterpic"],
+                                             position = v.Vec2d(640,360), movement = v.Vec2d(2000, -500), 
+                                             party = 0, hitpoints = 60, speed = 500)
+        
+        
+        #_____________attackFighterD5___________
+        self.attackFighterD5 = AttackFighter(picture = PygView.pictures["swarmhunterpic"],
+                                             position = v.Vec2d(620,380), movement = v.Vec2d(2000, -500), 
+                                             party = 0, hitpoints = 60, speed = 500)
         
         
         
-        for b in range(100):
-            Balloon(position = v.Vec2d(random.randint(278, 1000), 
+        
+        for b in range(20):
+            Balloon(position = v.Vec2d(random.randint(278, 1100), 
                                random.randint(20, 680)), width=8, height=8, 
-                               hitpoints = random.randint(40,400))
+                               hitpoints = random.randint(40,400), party = 8967)
         
         
     def run(self):
@@ -687,8 +811,8 @@ class PygView():
             write(self.screen, "FPS:  {:4.3}".format(self.clock.get_fps()), x = round(w*0.01, 0), y = round(h*0.95, 0))
             write(self.screen, "TIME:{:6.3} sec".format(self.playtime), x = round(w*0.01, 0), y = round(h*0.97, 0))
             
-            #------collision dedection----------
-            for tar in self.targetgroup:
+            #------collision dedection missile----------
+            for tar in self.mtargetgroup:
                 crash = pygame.sprite.spritecollide(tar, self.missilegroup, False, pygame.sprite.collide_mask)
                 for m in crash:
                     if m.party == tar.party:
@@ -697,8 +821,36 @@ class PygView():
                     tar.hitpoints -= m.damage
                     #Explosion(position = v.Vec2d(m.position.x, m.position.y))        
                     m.kill()
+                    
+            
+            #------collision dedection pdshot----------
+            for tar in self.pdtargetgroup:
+                crash = pygame.sprite.spritecollide(tar, self.pdshotgroup, False, pygame.sprite.collide_mask)
+                for pd in crash:
+                    if pd.party == tar.party:
+                        continue
+                    Flytext(pd.position.x, pd.position.y, text="-{}".format(pd.damage))
+                    tar.hitpoints -= pd.damage
+                    #Explosion(position = v.Vec2d(m.position.x, m.position.y))        
+                    pd.kill()
+                    
+            
+            #-------------SchwarmUpdate------------
+            #s = v.Vec2d(0,0)
+            for f in self.attackfightergroup:
+                if f.number == self.attackFighterD1.number:
+                    continue
+                f.movement *= 0.9
+                f.movement += self.attackFighterD1.movement
+            #s = s/len(self.attackfightergroup)
             
             
+            #----------fighter follows mouse-----------
+            x,y = pygame.mouse.get_pos()
+            diff = v.Vec2d(x, y) - self.attackFighterD1.position
+            self.attackFighterD1.movement = diff
+            
+            # ----------------------------
             self.allgroup.update(seconds) 
             self.allgroup.draw(self.screen)  
             
@@ -706,7 +858,7 @@ class PygView():
             # ------ turret auto-aim------
             for tr in self.turretgroup:
                 targets = []
-                for ta in self.targetgroup:
+                for ta in self.mtargetgroup:
                     if ta.party != tr.party:
                         if ta.position.get_distance(tr.position) <= tr.max_range:
                             targets.append(ta)
@@ -724,18 +876,60 @@ class PygView():
                                     )
                     
                     
-                    if random.random() < 0.05:
+                    if random.random() < 0.03:
                         diff = primaryTarget.position - tr.position
-                        diff = diff.normalized() * 400
-                        Missile(picture = PygView.pictures["missilepic"], 
+                        diff = diff.normalized() * 300
+                        Missile(picture = PygView.pictures["missile" +str(tr.party)+ "pic"], 
                                 position = v.Vec2d(tr.position.x, tr.position.y), 
                                 movement = diff, angle = -diff.get_angle()-180, misschance = 0.01, 
                                 target = v.Vec2d(primaryTarget.position.x, primaryTarget.position.y), 
                                 hitpoints = 10, damage = 50, party = tr.party, max_age = 3, 
-                                max_distance = tr.max_range, threat_lvl = 12)
+                                max_distance = tr.max_range, threat_lvl = 8)
             
                     vectordiff = tr.position - primaryTarget.position
                     tr.set_angle(-vectordiff.get_angle()-180)
+                    
+                    
+                    
+                    
+            # ------ pdturret auto-aim ------
+            for tr in self.pdturretgroup:
+                targets = []
+                for ta in self.pdtargetgroup:
+                    if ta.party != tr.party:
+                        if ta.position.get_distance(tr.position) <= tr.max_range:
+                            targets.append(ta)
+                            
+                primaryTarget = None
+                for ta in targets:
+                    if primaryTarget is None:
+                        primaryTarget = ta
+                    elif ta.threat_lvl > primaryTarget.threat_lvl:
+                        primaryTarget = ta
+                if primaryTarget is not None:
+                    pygame.draw.line(self.screen, (0,70,150), 
+                                     (tr.position.x, tr.position.y), 
+                                     (primaryTarget.position.x, primaryTarget.position.y), 1
+                                    )
+                    
+                    
+                    if random.random() < 0.8:
+                        diff = primaryTarget.position - tr.position
+                        diff = diff.normalized() * 400
+                        pdm = v.Vec2d(500, 0)
+                        abetung = random.randint(-10,10)
+                        vectordiff = tr.position - primaryTarget.position
+                        tr.set_angle(-vectordiff.get_angle()-180 + abetung)
+                        pdm = pdm.rotated(vectordiff.get_angle()-180 + abetung)
+                        PDshot(picture = PygView.pictures["pdshotpic"], 
+                                position = v.Vec2d(tr.position.x, tr.position.y), 
+                                movement = pdm, angle = -vectordiff.get_angle()-180 + abetung, misschance = 0.01, 
+                                target = v.Vec2d(primaryTarget.position.x, primaryTarget.position.y), 
+                                hitpoints = 2, damage = 2, party = tr.party, max_age = 2, 
+                                max_distance = tr.max_range, threat_lvl = 1)
+                        
+                    
+           
            
             
             pygame.display.flip()
