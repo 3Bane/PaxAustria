@@ -210,6 +210,23 @@ class VectorSprite(pygame.sprite.Sprite):
                              round(self.position.y, 0) )
 
 
+class TargetDrone(VectorSprite):
+    
+    def create_image(self):
+        if self.picture is not None:
+            self.image = self.picture.copy()
+        else:            
+            self.image = pygame.Surface((self.width*2,self.height))    
+            pygame.draw.circle(self.image, (50*self.threat_lvl, 10*self.threat_lvl , 10),
+                               (self.width//2, self.height//2), self.width*2)
+            #self.image.fill((self.color))
+        self.image = self.image.convert_alpha()
+        self.image0 = self.image.copy()
+        self.rect = self.image.get_rect()
+        self.width = self.rect.width
+        self.height = self.rect.height
+
+
 class Balloon(VectorSprite):
     
     def create_image(self):
@@ -217,7 +234,7 @@ class Balloon(VectorSprite):
             self.image = self.picture.copy()
         else:            
             self.image = pygame.Surface((self.width,self.height))    
-            pygame.draw.circle(self.image, (50*self.threat_lvl, 10*self.threat_lvl , 50),
+            pygame.draw.circle(self.image, (50*self.threat_lvl, 100 , 255),
                                (self.width//2, self.height//2), self.width)
             #self.image.fill((self.color))
         self.image = self.image.convert_alpha()
@@ -314,15 +331,43 @@ class Ship(VectorSprite):
         VectorSprite.update(self, seconds)
         
 
-class AttackFighter(VectorSprite):
+class Fighter(VectorSprite):
     
     def __init__(self, **kwargs):
         VectorSprite.__init__(self, **kwargs)
         if "TargetSprite" not in kwargs:
             self.TargetSprite = None
+        self.targettime = self.age + 1.5
+        self.olds = v.Vec2d(0, 0)
+        self.weapon_range = 200
             
     def update(self, seconds):
-        self.set_angle(-self.movement.get_angle())
+        #-------------Targetupdate------------
+        if self.target is not None and self.age > self.targettime:           
+            s = v.Vec2d(self.target.position.x, self.target.position.y) - self.position
+            #--------------fire?---------------
+            if s.get_length() < self.olds.get_length() and s.get_length() < self.weapon_range:
+                if random.random() < 0.8:
+                        diff = v.Vec2d(s.x, s.y)
+                        diff = diff.normalized() * 400
+                        pdm = v.Vec2d(500, 0)
+                        abetung = random.randint(-2,2)
+                        vectordiff = s
+                        #.set_angle(-vectordiff.get_angle()-180 + abetung)
+                        pdm = pdm.rotated(vectordiff.get_angle() + abetung)
+                        PDshot(picture = PygView.pictures["pdshotpic"], 
+                                position = v.Vec2d(self.position.x, self.position.y), 
+                                movement = pdm, angle = -vectordiff.get_angle()-180 + abetung, misschance = 0.01, 
+                                target = v.Vec2d(self.target.position.x, self.target.position.y), 
+                                hitpoints = 2, damage = 2, party = self.party, max_age = 2, 
+                                max_distance = self.weapon_range, threat_lvl = 1)
+            self.olds = s
+            if s.get_length() < 10:
+                self.targettime = self.age + 1.5
+            self.movement *= 0.059
+            self.movement += s
+            self.set_angle(-self.movement.get_angle())
+        
         #speedlimit
         currentspeed = self.movement.get_length()
         if currentspeed != self.speed:
@@ -522,7 +567,8 @@ class PygView():
         self.mtargetgroup = pygame.sprite.Group()
         self.pdtargetgroup = pygame.sprite.Group()
         self.shipgroup = pygame.sprite.Group()
-        self.attackfightergroup = pygame.sprite.Group()
+        self.fightergroup = pygame.sprite.Group()
+        self.targetdronegroup = pygame.sprite.Group()
         self.vectorspritegroup = pygame.sprite.Group()
         self.turretgroup = pygame.sprite.Group()
         self.pdturretgroup = pygame.sprite.Group()
@@ -532,10 +578,11 @@ class PygView():
         self.pdshotgroup = pygame.sprite.Group()
         self.explosiongroup = pygame.sprite.Group()
         
+        TargetDrone.groups = self.allgroup, self.targetdronegroup
         Flytext.groups = self.flytextgroup, self.allgroup
         VectorSprite.groups = self.allgroup, self.vectorspritegroup
         Ship.groups = self.allgroup, self.shipgroup, self.mtargetgroup
-        AttackFighter.groups = self.allgroup, self.shipgroup, self.attackfightergroup, self.pdtargetgroup
+        Fighter.groups = self.allgroup, self.shipgroup, self.fightergroup, self.pdtargetgroup
         Turret.groups = self.allgroup, self.turretgroup, self.mtargetgroup
         PDturret.groups = self.allgroup, self.pdturretgroup, self.mtargetgroup
         Balloon.groups = self.allgroup, self.balloongroup, self.mtargetgroup
@@ -722,38 +769,44 @@ class PygView():
         
         
         #_____________attackFighterD1___________
-        self.attackFighterD1 = AttackFighter(picture = PygView.pictures["swarmhunterpic"],
-                                             position = v.Vec2d(620,300), movement = v.Vec2d(2000, -500), 
-                                             party = 0, hitpoints = 60, speed = 500)
+        #self.attackFighterD1 = Fighter(picture = PygView.pictures["swarmhunterpic"],
+        #                                     position = self.mothership1.position, movement = v.Vec2d(0, 100), 
+        #                                     party = 1, hitpoints = 60, speed = 500)
         
         
         #_____________attackFighterD2___________
-        self.attackFighterD2 = AttackFighter(picture = PygView.pictures["swarmhunterpic"],
-                                             position = v.Vec2d(640,320), movement = v.Vec2d(2000, -500), 
-                                             party = 0, hitpoints = 60, speed = 500)
+        #self.attackFighterD2 = Fighter(picture = PygView.pictures["swarmhunterpic"],
+        #                                     position = self.mothership1.position, movement = v.Vec2d(0, 100), 
+        #                                     party = 1, hitpoints = 60, speed = 500)
         
         
         #_____________attackFighterD3___________
-        self.attackFighterD3 = AttackFighter(picture = PygView.pictures["swarmhunterpic"],
-                                             position = v.Vec2d(660,340), movement = v.Vec2d(2000, -500), 
-                                             party = 0, hitpoints = 60, speed = 500)
+        #self.attackFighterD3 = Fighter(picture = PygView.pictures["swarmhunterpic"],
+        #                                     position = self.mothership1.position, movement = v.Vec2d(0, 100), 
+        #                                     party = 1, hitpoints = 60, speed = 500)
         
         
         #_____________attackFighterD4___________
-        self.attackFighterD4 = AttackFighter(picture = PygView.pictures["swarmhunterpic"],
-                                             position = v.Vec2d(640,360), movement = v.Vec2d(2000, -500), 
-                                             party = 0, hitpoints = 60, speed = 500)
+        #self.attackFighterD4 = Fighter(picture = PygView.pictures["swarmhunterpic"],
+        #                                     position = self.mothership1.position, movement = v.Vec2d(0, 100), 
+        #                                     party = 1, hitpoints = 60, speed = 500)
         
         
         #_____________attackFighterD5___________
-        self.attackFighterD5 = AttackFighter(picture = PygView.pictures["swarmhunterpic"],
-                                             position = v.Vec2d(620,380), movement = v.Vec2d(2000, -500), 
-                                             party = 0, hitpoints = 60, speed = 500)
+        #self.attackFighterD5 = Fighter(picture = PygView.pictures["swarmhunterpic"],
+        #                                     position = self.mothership1.position, movement = v.Vec2d(0, 100), 
+        #                                     party = 1, hitpoints = 60, speed = 500)
         
         
+        m = v.Vec2d(50, 0)
+        for i in range(8):
+            Fighter(picture = PygView.pictures["swarmhunterpic"],
+                          position = v.Vec2d(self.mothership1.position.x, self.mothership1.position.y),
+                          movement = v.Vec2d(m.x, m.y), party = 1, hitpoints = 60, speed = 200)
+            m.rotate(45)
         
         
-        for b in range(20):
+        for b in range(200):
             Balloon(position = v.Vec2d(random.randint(278, 1100), 
                                random.randint(20, 680)), width=8, height=8, 
                                hitpoints = random.randint(40,400), party = 8967)
@@ -786,7 +839,20 @@ class PygView():
                     
                     if event.key == pygame.K_e:
                         Explosion(position = v.Vec2d(650,350))        
+                        
+                    if event.key == pygame.K_i:
+                        p = v.Vec2d(pygame.mouse.get_pos())
+                        m = v.Vec2d(random.randint(-10, 10), random.randint(-10, 10))
+                        TargetDrone(width = 8, height = 8, hitpoints = random.randint(40,400), party = 8967,
+                                    position = p, movement = m)
                     
+                    if event.key == pygame.K_t:
+                        if len(self.targetdronegroup) > 0:
+                            dronetarget = random.choice(self.targetdronegroup.sprites())
+                            Explosion(position = dronetarget.position)
+                            for fi in self.fightergroup:
+                                fi.target = dronetarget
+                                
                     
                     
             # ---------- update screen ----------- 
@@ -837,18 +903,24 @@ class PygView():
             
             #-------------SchwarmUpdate------------
             #s = v.Vec2d(0,0)
-            for f in self.attackfightergroup:
-                if f.number == self.attackFighterD1.number:
-                    continue
-                f.movement *= 0.9
-                f.movement += self.attackFighterD1.movement
-            #s = s/len(self.attackfightergroup)
+            #for f in self.fightergroup:
+            #    s += f.position
+            #s = s/len(self.fightergroup)
+            #for f in self.fightergroup:
+                #if f.number == self.attackFighterD1.number:
+                #    continue
+            #    f.movement *= 0.059
+                #f.movement += self.attackFighterD1.movement
+            #    f.movement += (s - f.position )
+            
+            
+            #s = s/len(self.fightergroup)
             
             
             #----------fighter follows mouse-----------
-            x,y = pygame.mouse.get_pos()
-            diff = v.Vec2d(x, y) - self.attackFighterD1.position
-            self.attackFighterD1.movement = diff
+            #x,y = pygame.mouse.get_pos()
+            #diff = v.Vec2d(x, y) - self.attackFighterD1.position
+            #self.attackFighterD1.movement = diff
             
             # ----------------------------
             self.allgroup.update(seconds) 
@@ -911,7 +983,6 @@ class PygView():
                                      (tr.position.x, tr.position.y), 
                                      (primaryTarget.position.x, primaryTarget.position.y), 1
                                     )
-                    
                     
                     if random.random() < 0.8:
                         diff = primaryTarget.position - tr.position
