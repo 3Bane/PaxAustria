@@ -844,7 +844,7 @@ class PygView():
                         p = v.Vec2d(pygame.mouse.get_pos())
                         m = v.Vec2d(random.randint(-10, 10), random.randint(-10, 10))
                         TargetDrone(width = 8, height = 8, hitpoints = random.randint(40,400), party = 8967,
-                                    position = p, movement = m)
+                                    position = p, movement = m, max_age = 120)
                     
                     if event.key == pygame.K_t:
                         if len(self.targetdronegroup) > 0:
