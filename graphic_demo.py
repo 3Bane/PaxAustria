@@ -482,7 +482,7 @@ class PygView():
     pictures = {}
     expimages = []
   
-    def __init__(self, width=1400, height=700, gridsize=50, fps=60):
+    def __init__(self, width=1400, height=700, gridsize=50, fps=50):
         """Initialize pygame, window, background, font,...
            default arguments 
         """
@@ -492,31 +492,32 @@ class PygView():
         PygView.height = height  # also self.height
         PygView.gridsize = gridsize 
         self.screen = pygame.display.set_mode((self.width, self.height), pygame.DOUBLEBUF)
-        tmp = pygame.image.load(os.path.join("data","background10.jpg"))
+        tceta = random.randint(2,10)
+        tmp = pygame.image.load(os.path.join("data","background" + str(tceta) + ".jpg"))
         hdiff = int (round(self.width/28*10, 0))
         
         self.backgroundimg = pygame.transform.scale(tmp, (self.width-hdiff, self.height))
         self.background = pygame.Surface((self.width, self.height))
         self.background.blit(self.backgroundimg, (hdiff//2,0))
-        pygame.draw.ellipse(self.background, (64,64,64), (PygView.width/4, PygView.height/7, PygView.width/2, PygView.height/7*5), 1)
+        #pygame.draw.ellipse(self.background, (64,64,64), (PygView.width/4, PygView.height/7, PygView.width/2, PygView.height/7*5), 1)
         #border left
-        pygame.draw.polygon(self.background, (64,64,64), (
-                                                          (0,0),
-                                                          (PygView.width/14*3, 0),
-                                                          (PygView.width/28*5, PygView.height/14),
-                                                          (PygView.width/28*5, PygView.height/14*13),
-                                                          (PygView.width/14*3, PygView.height),
-                                                          (0, PygView.height),
-                                                          ), 0)
+        #pygame.draw.polygon(self.background, (64,64,64), (
+        #                                                  (0,0),
+        #                                                  (PygView.width/14*3, 0),
+        #                                                  (PygView.width/28*5, PygView.height/14),
+        #                                                  (PygView.width/28*5, PygView.height/14*13),
+        #                                                  (PygView.width/14*3, PygView.height),
+        #                                                  (0, PygView.height),
+        #                                                  ), 0)
         #border right
-        pygame.draw.polygon(self.background, (64,64,64), (
-                                                          (PygView.width,0),
-                                                          (PygView.width/14*11, 0),
-                                                          (PygView.width/28*23, PygView.height/14),
-                                                          (PygView.width/28*23, PygView.height/14*13),
-                                                          (PygView.width/14*11, PygView.height),
-                                                          (PygView.width, PygView.height),
-                                                          ), 0)
+        #pygame.draw.polygon(self.background, (64,64,64), (
+        #                                                  (PygView.width,0),
+        #                                                  (PygView.width/14*11, 0),
+        #                                                  (PygView.width/28*23, PygView.height/14),
+        #                                                  (PygView.width/28*23, PygView.height/14*13),
+        #                                                  (PygView.width/14*11, PygView.height),
+        #                                                  (PygView.width, PygView.height),
+        #                                                  ), 0)
         # self.grid()
         PygView.pictures["hunterpic"] = pygame.image.load(os.path.join("data","Hunter.png")).convert_alpha()
         PygView.pictures["hunterpic"] = pygame.transform.scale(PygView.pictures["hunterpic"], (40, 40)).convert_alpha()
@@ -574,12 +575,6 @@ class PygView():
         self.fps = fps
         self.playtime = 0.0
         self.font = pygame.font.SysFont('mono', 24, bold=True)
-        for x in range (0, PygView.width, 150):
-            for y in range (0, PygView.height, 87):
-                paint_hex(self.background, v.Vec2d(x, y), 50)
-        for x in range (0, PygView.width, 150):
-            for y in range (0, PygView.height, 87):
-                paint_hex(self.background, v.Vec2d(x+75, y+45), 50)
 
  
     def paint(self):
@@ -906,6 +901,7 @@ class PygView():
                     
                     
             # ---------- update screen ----------- 
+            
             self.screen.blit(self.background, (0, 0))
             
             # --------- pressed key handler --------------  
@@ -916,16 +912,6 @@ class PygView():
                 for t in self.turretgroup:
                     pygame.draw.circle(self.screen, t.carrier.color, t.rect.center, t.max_range, 2)
             
-            
-            #---------FPS anzeige----------
-            milliseconds = self.clock.tick(self.fps)
-            seconds = milliseconds / 1000.0
-            self.playtime += seconds
-            
-            w = PygView.width
-            h = PygView.height
-            write(self.screen, "FPS:  {:4.3}".format(self.clock.get_fps()), x = round(w*0.01, 0), y = round(h*0.95, 0))
-            write(self.screen, "TIME:{:6.3} sec".format(self.playtime), x = round(w*0.01, 0), y = round(h*0.97, 0))
             
             #------collision dedection missile----------
             for tar in self.mtargetgroup:
@@ -1069,8 +1055,46 @@ class PygView():
                         
                     
            
-           
             
+            
+            for x in range (0, PygView.width, 150):
+                for y in range (0, PygView.height, 87):
+                    paint_hex(self.screen, v.Vec2d(x, y), 50)
+            for x in range (0, PygView.width, 150):
+                for y in range (0, PygView.height, 87):
+                    paint_hex(self.screen, v.Vec2d(x+75, y+45), 50)
+            
+            #border left
+            pygame.draw.polygon(self.screen, (64,64,64), (
+                                                              (0,0),
+                                                              (PygView.width/14*3, 0),
+                                                              (PygView.width/28*5, PygView.height/14),
+                                                              (PygView.width/28*5, PygView.height/14*13),
+                                                              (PygView.width/14*3, PygView.height),
+                                                              (0, PygView.height),
+                                                              ), 0)
+            #border right
+            pygame.draw.polygon(self.screen, (64,64,64), (
+                                                              (PygView.width,0),
+                                                              (PygView.width/14*11, 0),
+                                                              (PygView.width/28*23, PygView.height/14),
+                                                              (PygView.width/28*23, PygView.height/14*13),
+                                                              (PygView.width/14*11, PygView.height),
+                                                              (PygView.width, PygView.height),
+                                                              ), 0)
+                                                              
+            
+            #---------FPS anzeige----------
+            milliseconds = self.clock.tick(self.fps)
+            seconds = milliseconds / 1000.0
+            self.playtime += seconds
+            
+            w = PygView.width
+            h = PygView.height
+            write(self.screen, "FPS:  {:4.3}".format(self.clock.get_fps()), x = round(w*0.01, 0), y = round(h*0.95, 0))
+            write(self.screen, "TIME:{:6.3} sec".format(self.playtime), x = round(w*0.01, 0), y = round(h*0.97, 0))
+                
+                
             pygame.display.flip()
         pygame.quit()
     
