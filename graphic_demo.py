@@ -122,7 +122,7 @@ class VectorSprite(pygame.sprite.Sprite):
         except:
             # key error?
             print("problem: could not delete sprite number" + str(self.number))
-        print("killing: ", self.number)
+        #print("killing: ", self.number)
         pygame.sprite.Sprite.kill(self)
         
     def animate(self):
@@ -283,11 +283,11 @@ class Turret(VectorSprite):
         VectorSprite.update(self, seconds)
         vec = self.startVec.rotated(self.carrier.faceing)
         self.position = self.carrier.position + vec
-        try:
-            if self.carrier.hitpoints <= 0:
-                self.kill()
-        except:
+        #try:
+        if self.carrier.hitpoints <= 0:
             self.kill()
+        #except:
+        #    self.kill()
         
 
 class PDturret(Turret):
@@ -314,12 +314,27 @@ class Missile(VectorSprite):
         Explosion(position = self.position)
         VectorSprite.kill(self)
     
-    #def update(self, seconds):
-        #VectorSprite.update(self, seconds)
-        #self.tr_distance = (self.position - self.target).get_length()
-        #if self.tr_distance > self.tr_distance_old:
-        #    self.kill()
-        #self.tr_distance_old = self.tr_distance
+    def update(self, seconds):
+        """calculate movement, position and bouncing on edge"""
+        # ----- kill because... ------
+        if self.hitpoints <= 0:
+            self.kill()
+            #print("DIED: no HP", self.hitpoints)
+        if self.max_age is not None and self.age > self.max_age:
+            self.kill()
+            #print("DIED: to OLD", self.hitpoints)
+        if self.max_distance is not None and self.distance_traveled > self.max_distance:
+            self.kill()
+            #print("DIED: to FAR", self.hitpoints)
+            
+        self.position += self.movement * seconds
+        self.turn_to_angle(seconds)
+        self.distance_traveled += self.movement.length * seconds
+        self.age += seconds
+        
+        self.rect.center = ( round(self.position.x, 0), 
+                             round(self.position.y, 0) )
+
 
 class PDshot(Missile):
     
@@ -716,19 +731,19 @@ class PygView():
         #-----------turretD1-------------
         self.turretD1 = Turret(picture = PygView.pictures["turret0pic"], position = self.dreadnaught2.position,
                               carrier = self.dreadnaught2, startVec = v.Vec2d(100, 0), max_range = 500,
-                              party = 0, threat_lvl = 7, hitpoints = 5000)
+                              party = 0, threat_lvl = 7, hitpoints = 50000)
         
         
         #-----------turretD2-------------
         self.turretD2 = Turret(picture = PygView.pictures["turret0pic"],position = self.dreadnaught2.position,
                               carrier = self.dreadnaught2, startVec = v.Vec2d(75, -30), max_range = 500,
-                              party = 0, threat_lvl = 7, hitpoints = 5000)
+                              party = 0, threat_lvl = 7, hitpoints = 50000)
                               
         
         #-----------turretD3-------------
         self.turretD3 = Turret(picture = PygView.pictures["turret0pic"],position = self.dreadnaught2.position,
                               carrier = self.dreadnaught2, startVec = v.Vec2d(75, 30), max_range = 500,
-                              party = 0, threat_lvl = 7, hitpoints = 5000)
+                              party = 0, threat_lvl = 7, hitpoints = 50000)
                               
                               
         #-----------pdturretD1-----------    
@@ -754,7 +769,7 @@ class PygView():
         #-----------turretM1-------------
         self.turretM1 = Turret(picture = PygView.pictures["turret1pic"],position = self.mothership1.position,
                               carrier = self.mothership1, startVec = v.Vec2d(85, 0), max_range = 700,
-                              party = 1, threat_lvl = 7, hitpoints = 5000)
+                              party = 1, threat_lvl = 7, hitpoints = 50000)
 
 
         #-----------pdturretM1-----------    
@@ -805,46 +820,46 @@ class PygView():
         #                                     position = self.mothership1.position, movement = v.Vec2d(0, 100), 
         #                                     party = 1, hitpoints = 60, speed = 500)
         
-        m = v.Vec2d(random.randint(-10, 10), random.randint(-10, 10))
-        p = v.Vec2d(pygame.mouse.get_pos())
-        TargetDrone(width = 8, height = 8, hitpoints = random.randint(40,400), party = 8967,
-                                    position = p, movement = m, max_age = 120)
+        #m = v.Vec2d(random.randint(-10, 10), random.randint(-10, 10))
+        #p = v.Vec2d(pygame.mouse.get_pos())
+        #TargetDrone(width = 8, height = 8, hitpoints = random.randint(40,400), party = 8967,
+        #                            position = p, movement = m, max_age = 120)
         
         
         
         #tu = random.choice([t for t in self.turretgroup.sprites() if t.party != 1])
         #print("fightertarget", tu)
-        m = v.Vec2d(50, 0)
-        for i in range(8):
-            Fighter(picture = PygView.pictures["swarmhunterpic"],
-                          position = v.Vec2d(self.mothership1.position.x, self.mothership1.position.y),
-                          movement = v.Vec2d(m.x, m.y), party = 1, hitpoints = 60000, speed = 200)
-            m.rotate(45)
+        #m = v.Vec2d(50, 0)
+        #for i in range(8):
+        #    Fighter(picture = PygView.pictures["swarmhunterpic"],
+        #                  position = v.Vec2d(self.mothership1.position.x, self.mothership1.position.y),
+        #                  movement = v.Vec2d(m.x, m.y), party = 1, hitpoints = 60000, speed = 200)
+        #    m.rotate(45)
         
-        self.fightertarget0 = None
-        self.fightertarget1 = None
-        self.select_new_fightertarget(1)
+        #self.fightertarget0 = None
+        #self.fightertarget1 = None
+        #self.select_new_fightertarget(1)
         
-        for b in range(10):
+        for b in range(500):
             Balloon(position = v.Vec2d(random.randint(278, 1100), 
                                random.randint(20, 680)), width=8, height=8, 
                                hitpoints = random.randint(40,400), party = 8967)
         
-    def select_new_fightertarget(self, party=1):
-        tu = random.choice([t for t in self.turretgroup.sprites() if t.party != party])
-        for fi in self.fightergroup:
-            if fi.party == party: 
-                fi.target = tu
-        if party == 0:
-            self.fightertarget0 = tu
-            print("numbers for swarm 0: ", self.fightertarget0.number)
-       
-        elif party == 1:
-            self.fightertarget1 = tu
-            print("numbers for swarm 1: ", self.fightertarget1.number)
-       
-        print("target aquired for party:", party)
-        print("fightertargets are:", self.fightertarget0, self.fightertarget1)
+    #def select_new_fightertarget(self, party=1):
+    #    tu = random.choice([t for t in self.turretgroup.sprites() if t.party != party])
+    #    for fi in self.fightergroup:
+    #        if fi.party == party: 
+    #            fi.target = tu
+    #    if party == 0:
+    #        self.fightertarget0 = tu
+    #        print("numbers for swarm 0: ", self.fightertarget0.number)
+    #   
+    #    elif party == 1:
+    #        self.fightertarget1 = tu
+    #        print("numbers for swarm 1: ", self.fightertarget1.number)
+    #   
+    #    print("target aquired for party:", party)
+    #    print("fightertargets are:", self.fightertarget0, self.fightertarget1)
             
         
     def run(self):
@@ -920,14 +935,9 @@ class PygView():
                         continue
                     Flytext(m.position.x, m.position.y, text="{} -{}".format(tar.hitpoints, m.damage))
                     tar.hitpoints -= m.damage
-                    if tar.hitpoints <= 0:
-                        # select new fighertarget?
-                        if tar == self.fightertarget0:
-                            self.select_new_fightertarget(0)
-                        elif tar == self.fightertarget1:
-                            self.select_new_fightertarget(1)
-                    #Explosion(position = v.Vec2d(m.position.x, m.position.y))        
+                    Explosion(position = v.Vec2d(m.position.x, m.position.y))        
                     m.kill()
+                    #print("DIED: COLLISION", m.hitpoints)
                     
             
             #------collision dedection pdshot----------
@@ -940,21 +950,21 @@ class PygView():
                     tar.hitpoints -= pd.damage
                     if tar.hitpoints < 1:
                         # select new fighertarget?
-                        print("kaputt: #", tar.number)
-                        if tar == self.fightertarget0:
+                        #print("kaputt: #", tar.number)
+                        #if tar == self.fightertarget0:
                             #print("ich suche neues target!!")
-                            self.select_new_fightertarget(0)
+                        #    self.select_new_fightertarget(0)
                             #print("neues T
                             
-                        elif tar == self.fightertarget1:
-                            print("target kaputt!", tar)
-                            print("0,1", self.fightertarget0, self.fightertarget1)
-                        
-                            print("ich suche neues target. derzeit:", tar)
-                            self.select_new_fightertarget(1)
-                            print("neu gsucht und gefunden:", self.fightertarget1)
-                    #Explosion(position = v.Vec2d(m.position.x, m.position.y))        
-                    pd.kill()
+                        #elif tar == self.fightertarget1:
+                        #    print("target kaputt!", tar)
+                        #    print("0,1", self.fightertarget0, self.fightertarget1)
+                        #
+                        #    print("ich suche neues target. derzeit:", tar)
+                        #    self.select_new_fightertarget(1)
+                        #    print("neu gsucht und gefunden:", self.fightertarget1)
+                     Explosion(position = v.Vec2d(m.position.x, m.position.y))        
+                     pd.kill()
                     
             
             #-------------SchwarmUpdate------------
@@ -1012,7 +1022,7 @@ class PygView():
                                 position = v.Vec2d(tr.position.x, tr.position.y), 
                                 movement = diff, angle = -diff.get_angle()-180, misschance = 0.01, 
                                 target = primaryTarget, 
-                                hitpoints = 10, damage = 50, party = tr.party, max_age = 3, 
+                                hitpoints = 1, damage = 50, party = tr.party, max_age = 3, 
                                 max_distance = tr.max_range, threat_lvl = 8)
             
                     vectordiff = tr.position - primaryTarget.position
